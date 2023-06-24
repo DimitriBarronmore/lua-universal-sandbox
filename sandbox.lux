@@ -1,0 +1,321 @@
+---@param module table The base module being copied.
+---@param whitelist string? An optional whitelist of module contents.
+---@return table new_module The new copy of the given module.
+---Makes a shallow copy of the given module. If a whitelist is provided,
+---only the first-level contents of the whitelist are copied.
+local function copy_list(module, whitelist)
+	local out = {}
+	if whitelist then
+		for word in string.gmatch(whitelist, "%a+") do
+			out[word] = module[word]
+		end
+	else
+		for k,v in pairs(module) do
+			out[k] = v
+		end
+	end
+	return out
+end
+
+--[[
+	This function comes from a stackoverflow answer by islet8.
+		Slightly modified to actually work.
+	https://stackoverflow.com/a/16077650
+	https://creativecommons.org/licenses/by-sa/3.0/
+--]]
+---@param o table
+---@param seen table?
+---@return table
+local deepcopy
+deepcopy = function(o, seen)
+	seen = seen or {}
+	if o == nil then return nil end
+	if seen[o] then return seen[o] end
+
+	local no
+	if type(o) == 'table' then
+	no = {}
+	seen[o] = no
+
+	for k, v in next, o, nil do
+		no[deepcopy(k, seen)] = deepcopy(v, seen)
+	end
+	setmetatable(no, deepcopy(getmetatable(o), seen))
+	else -- number, string, boolean, etc
+	no = o
+	end
+	return no
+end
+
+
+--- Complete unsafe copy of the base environment.
+initial_environment = {
+	_VERSION = _VERSION,
+	assert = assert,
+	collectgarbage = collectgarbage,
+	dofile = dofile,
+	error = error,
+	getmetatable = getmetatable,
+	ipairs = ipairs,
+	load = load,
+	loadfile = loadfile,
+	loadstring = loadstring,
+	next = next,
+	pairs = pairs,
+	pcall = pcall,
+	print = print,
+	rawequal = rawequal,
+	rawlen = rawlen,
+	rawset = rawset,
+	rawget = rawget,
+	require = require,
+	select = select,
+	setmetatable = setmetatable,
+	tonumber = tonumber,
+	tostring = tostring,
+	type = type,
+	warn = warn,
+	xpcall = xpcall,
+	unpack = unpack,
+	getfenv = getfenv,
+	setfenv = setfenv,
+	utf8 = deepcopy(utf8),
+	coroutine = deepcopy(coroutine),
+	debug = deepcopy(debug),
+	io = deepcopy(io),
+	math = deepcopy(math),
+	os = deepcopy(os),
+	string = deepcopy(string),
+	package = deepcopy(package),
+	table = deepcopy(table),
+}
+
+---@class set
+set_mt = {}
+set_mt.__index = set_mt
+function set_mt:add(...)
+	for _, element in ipairs({...}) do
+		self[element] = true
+	end
+end
+function set_mt:remove(...)
+	for _, element in ipairs({...}) do
+		self[element] = nil
+	end
+end
+function set_mt:removeall()
+	for key in pairs(self) do
+		self[key] = nil
+	end
+end
+function set_mt:add_from_table(tab)
+	for key in pairs(tab) do
+		self[key] = true
+	end
+end
+---@return set
+function new_set()
+	return setmetatable({}, set_mt)
+end
+
+
+---@class sandboxTemplate
+---@field inherits? sandboxTemplate
+---@field keeps set
+---@field sets table
+---@field special? function
+template_mt = {}
+template_mt.__index = template_mt
+
+---@return sandboxEnv env The finished, usable sandbox table.
+function template_mt:create_env()
+	local environment = {}
+	if self.inherits then
+		old_environment = self.inherits:create_env()
+		for key in pairs(self.keeps) do
+			local module, method = key:match('([^%.]+)%.([^%.]+)')
+			if module and old_environment[module] then
+				environment[module] = environment[module] or {}
+				environment[module][method] = old_environment[module][method]
+			else
+				environment[key] = old_environment[key]
+			end
+			-- if not self.keeps[key] then
+			-- 	environment[key] = nil
+			-- end
+		end
+		old_environment = nil
+	-- else
+	-- 	environment = {}
+	end
+	for key, value in pairs(self.sets) do
+		environment[deepcopy(key)] = deepcopy(value)
+	end
+	if self.special then
+		self.special(environment)
+	end
+	return environment
+end
+
+local sandboxes = {}
+
+
+function sandboxes.clone(original)
+	new = {}
+	new.__is_sandbox_template = true
+	new.keeps = new_set()
+	new.sets = {}
+	new.inherits = original.inherits
+	for key in pairs(original.keeps) do
+		new.keeps:add(key)
+	end
+	for key, value in pairs(original.sets) do
+		new.sets[key] = value
+	end
+	new.special = original.special
+	new._G = new
+	setmetatable(new, template_mt)
+	return new
+end
+
+---@param inherits sandboxTemplate? The template to inherit from, if any.
+---@return sandboxTemplate
+function sandboxes.new(inherits, inherit_keeps)
+	new_template = {}
+	new_template.__is_sandbox_template = true
+	new_template.keeps = new_set()
+	new_template.sets = {}
+	if inherits then
+		if inherits.__is_sandbox_template then
+			new_template.inherits = inherits
+			if inherit_keeps then
+				for key in pairs(inherits.keeps) do
+					new_template.keeps:add(key)
+				end
+			end
+		else
+			error("attempted to inherit from invalid parent", 2)
+		end
+	end
+	new_template._G = new_template
+	setmetatable(new_template, template_mt)
+	return new_template
+end
+
+sandboxes.unsafe = sandboxes.new()
+sandboxes.unsafe.sets = initial_environment
+-- sandboxes.unsafe.special = (self) -> (self._G = self)
+
+
+sandboxes.restricted = sandboxes.new(sandboxes.unsafe)
+sandboxes.restricted.keeps:add( "_VERSION", "assert", "collectgarbage", "error", "ipairs", "next",
+								"pairs", "pcall", "print", "select", "tonumber", "tostring", "type",
+								"warn", "xpcall", "unpack", 
+								"utf8.char", "utf8.charpattern", "utf8.codes", "utf8.codepoint",
+								"utf8.len", "utf8.offset",  
+								"math.abs", "math.acos", "math.asin", "math.atan", "math.atan2",
+								"math.ceil", "math.floor", "math.cos", "math.cosh", "math.deg", 
+								"math.exp", "math.fmod", "math.frexp", "math.huge", "math.ldexp",
+								"math.log", "math.log10", "math.max", "math.min", "math.modf", "math.pi",
+								"math.pow", "math.rad", "math.random", "math.sin", "math.sinh", 
+								"math.sqrt", "math.tan", "math.tanh",
+								"string.lower", "string.upper", "string.dump", "string.find",
+								"string.match", "string.gmatch", "string.gsub", "string.format",
+								"string.len", "string.byte", "string.char", "string.sub", "string.rep", 
+								"string.reverse",
+								"coroutine.status", "coroutine.running", "coroutine.isyieldable",
+								"coroutine.create", "coroutine.yield", "coroutine.resume", 
+								"coroutine.wrap",
+								"os.clock", "os.difftime", "os.time",
+								"table.insert", "table.maxn", "table.remove", "table.sort"
+)
+
+
+
+-- local old_load, old_loadfile, old_loadstring = load, loadfile, loadstring
+
+sandboxes.protected = sandboxes.clone(sandboxes.restricted)
+sandboxes.protected.special = function(sbox)
+	if _VERSION < 5.2 then
+		sbox.load = function(a, b)
+			chunk, err = load(a, b)
+			if chunk then setfenv(chunk, sbox) end
+			return chunk, err
+		end
+		sbox.loadfile = function(a)
+			chunk, err = loadfile(a)
+			if chunk then setfenv(chunk, sbox) end
+			return chunk, err
+		end
+		sbox.loadstring = function(a)
+			chunk, err = loadstring(a)
+			if chunk then setfenv(chunk, sbox) end
+			return chunk, err
+		end
+	else -- 5.2 and above
+		sbox.load = function(a, b, c, env)
+			if env == nil then
+				env = sbox
+			end
+			return load(a, b, c, env)
+		end
+		sbox.loadfile = function(a, b, env)
+			if env == nil then
+				env = sbox
+			end
+			return loadfile(a, b, env)
+		end
+		sbox.loadstring = function(string, env)
+			if env == nil then
+				env = sbox
+			end
+			return load(string, nil, "t", env)
+		end
+	end
+
+	-- shared between both...
+	sbox.dofile = function(a)
+		chunk, err = sbox.loadfile(a)
+		if err then error(err, 2) end
+		return chunk()
+	end
+end
+
+---[[ TESTING AREA ]]---
+
+function test_print(env)
+	for k,v in pairs(env) do
+		if k != "_G" then
+			if type(v) == "table" then
+				-- print("same as default: ", v == _G[k])
+				local concat = {}
+				for j, l in pairs(v) do
+					if type(l) == "table" then
+						-- print("same as default: ", l == _G[k][j])
+					end
+					-- print ("%s.%s : %s":format(k, j, l))
+					table.insert(concat, "%s.%s":format(k,j))
+				end
+				print(table.concat(concat, "    "))
+			else
+				print("%s - %s":format(k, v))
+			end
+		end
+	end
+end
+
+-- local env = sandboxes.restricted:create_env()
+
+-- local templ2 = sandboxes.clone(sandboxes.restricted)
+-- templ2.keeps:remove("print", "unpack")
+-- local env2 = templ2:create_env()
+
+-- test_print(env)
+-- print("=====================")
+-- test_print(env2)
+-- templ = sandboxes.new()
+-- templ.keeps:add("aa")
+-- print(templ.keeps["aa"])
+-- print(sandboxes.new(templ).keeps["aa"])
+
+-- tab = templ:create_env()
