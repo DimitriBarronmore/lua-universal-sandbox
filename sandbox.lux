@@ -189,7 +189,7 @@ sandboxes.unsafe.sets = initial_environment
 
 
 sandboxes.restricted = sandboxes.new(sandboxes.unsafe)
-sandboxes.restricted.keeps:add( "_VERSION", "assert", "collectgarbage", "error", "ipairs", "next",
+sandboxes.restricted.keeps:add( "_VERSION", "assert", "error", "ipairs", "next",
 								"pairs", "pcall", "print", "select", "tonumber", "tostring", "type",
 								"warn", "xpcall", "unpack", 
 								"utf8.char", "utf8.charpattern", "utf8.codes", "utf8.codepoint",
@@ -202,7 +202,7 @@ sandboxes.restricted.keeps:add( "_VERSION", "assert", "collectgarbage", "error",
 								"math.sqrt", "math.tan", "math.tanh",
 								"string.lower", "string.upper", "string.find",
 								"string.match", "string.gmatch", "string.gsub", "string.format",
-								"string.len", "string.byte", "string.char", "string.sub", "string.rep", 
+								"string.len", "string.byte", "string.char", "string.sub", 
 								"string.reverse",
 								"coroutine.status", "coroutine.running", "coroutine.isyieldable",
 								"coroutine.create", "coroutine.yield", "coroutine.resume", 
@@ -314,7 +314,8 @@ end
 local string_metatable = getmetatable("")
 
 sandboxes.protected = sandboxes.clone(sandboxes.restricted)
-sandboxes.protected.keeps:add("setmetatable", "rawset", "rawget", "rawlen", "rawequal", "string.dump")
+sandboxes.protected.keeps:add("setmetatable", "rawset", "rawget", "rawlen", "rawequal", "string.dump", 
+							  "string.rep", "collectgarbage")
 sandboxes.protected.sets.getmetatable = function(obj)
 	res = getmetatable(obj)
 	if res ~= string_metatable then
