@@ -1,22 +1,3 @@
----@param module table The base module being copied.
----@param whitelist string? An optional whitelist of module contents.
----@return table new_module The new copy of the given module.
----Makes a shallow copy of the given module. If a whitelist is provided,
----only the first-level contents of the whitelist are copied.
-local function copy_list(module, whitelist)
-	local out = {}
-	if whitelist then
-		for word in string.gmatch(whitelist, "%a+") do
-			out[word] = module[word]
-		end
-	else
-		for k,v in pairs(module) do
-			out[k] = v
-		end
-	end
-	return out
-end
-
 --[[
 	This function comes from a stackoverflow answer by islet8.
 		Slightly modified to actually work.
@@ -231,12 +212,110 @@ sandboxes.restricted.keeps:add( "_VERSION", "assert", "collectgarbage", "error",
 )
 
 
+function sandboxes._check_file_exists(filename)
+	local file = io.open(filename)
+	if file then
+		file:close()
+		return true
+	end
+	return false
+end
 
--- local old_load, old_loadfile, old_loadstring = load, loadfile, loadstring
+sandboxes._default_require_path = package.path
+
+-- Based partially on code from Candran
+-- Thanks for having an implementation to reference
+-- https://github.com/Reuh/candran
+local function filepath_search(filepath)
+	for path in package.path:gmatch("[^;]+") do
+		local fixed_path = path:gsub("%?", (filepath:gsub("%.", "/")))
+		-- local file = open(fixed_path)
+		-- if file then
+		-- 	file:close()
+		-- 	return fixed_path
+		-- end
+		-- print("fpath", filepath)
+		if sandboxes._check_file_exists(fixed_path) then
+			return fixed_path
+		end
+	end
+end
+
+local function return_lua_searcher(env)
+	local searcher = function(modulepath)
+		local filepath = filepath_search(modulepath)
+		if filepath then
+			return function(reqpath)
+				local chunk, err = env.loadfile(filepath, "t", env)
+				if chunk then
+					return chunk, reqpath
+				else
+					error("error loading module '" .. reqpath .. "'\n" .. (err or ""), 0)
+				end
+			end
+		else
+			local err = ("\n\tno file '%s.lua' in package.path"):format(modulepath, 2)
+			return err
+		end
+	end
+	return searcher
+end
+
+
+local function create_require(env)
+	env.package = env.package or {}
+	env.package.searchers = { return_lua_searcher(env) }
+	env.package.preload = {}
+	env.package.loaded = {}
+	env.package.path = sandboxes._default_require_path
+
+	env.require = function(modname)
+		if env.package.loaded[modname] then
+			return env.package.loaded[modname]
+		end
+
+		local loader
+		local errors = {}
+		if env.package.preload[modname] then
+			loader = env.package.preload[modname]
+		else
+			for _,searcher in ipairs(env.package.searchers) do
+				local result = searcher(modname)
+				if type(result) == "function" then
+					loader = result
+					break
+				else
+					table.insert(errors, result)
+				end
+			end
+		end
+		if loader == nil then
+			error(table.concat(errors))
+		else
+			local status, res = pcall(loader, modname)
+			if status == false or type(res) ~= "function" then
+				error(res, 2)
+			end
+
+			local chunk = res
+			status, res = pcall(chunk, modname)
+			if status == false then
+				error("error loading module '" .. modname .. "'\n" .. res, 2)
+			end
+			if res == nil then
+				res = true
+			end
+			env.package.loaded[modname] = res
+			return res
+		end
+	end
+end
+
+
 
 sandboxes.protected = sandboxes.clone(sandboxes.restricted)
 sandboxes.protected.special = function(sbox)
-	if _VERSION < "Lua 5.2" then
+	if _VERSION == "Lua 5.1" then
 		sbox.load = function(a, b)
 			chunk, err = load(a, b)
 			if chunk then setfenv(chunk, sbox) end
@@ -279,6 +358,7 @@ sandboxes.protected.special = function(sbox)
 		if err then error(err, 2) end
 		return chunk()
 	end
+	create_require(sbox)
 end
 
 ---[[ TESTING AREA ]]---
@@ -320,3 +400,31 @@ end
 -- print(sandboxes.new(templ).keeps["aa"])
 
 -- tab = templ:create_env()
+
+----[[ file loading protection test ]]----
+
+environment = sandboxes.protected:create_env()
+
+local test_code = [[
+
+	apple = "yummy"
+	pear = "fruity"
+	lemon = "sour"
+
+	load("print(apple)")()
+	
+	loadstring("print(pear)")()
+	
+	loadfile("tmp_test.lua")()
+
+	print(apple)
+
+	dofile("tmp_test.lua")
+
+	print(require("tmp_test-require"))
+
+]]
+
+
+environment.loadstring(test_code)()
+print(apple, pear, lemon)

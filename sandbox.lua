@@ -1,259 +1,332 @@
  local _ENV = _ENV if _VERSION < "Lua 5.2" then 	_ENV = (getfenv and getfenv()) or _G end		 --0
  local __export = {}  		 --0
 ----
-local function copy_list ( module , whitelist ) --6
-local out = { } --7
-if whitelist then --8
-for word in _ENV.string . gmatch ( whitelist , "%a+" ) do --9
-out [ word ] = module [ word ] --10
-end--11
-else--12
-for k , v in _ENV.pairs ( module ) do --13
-out [ k ] = v --14
-end--15
-end--16
-return out --17
-end--18
-local deepcopy --29
-deepcopy = function ( o , seen ) --30
-seen = seen or { } --31
-if o == nil then --32
-return nil end --32
-if seen [ o ] then --33
-return seen [ o ] end --33
-local no --35
-if _ENV.type ( o ) == 'table' then --36
-no = { } --37
-seen [ o ] = no --38
-for k , v in _ENV.next , o , nil do --40
-no [ deepcopy ( k , seen ) ] = deepcopy ( v , seen ) --41
-end--42
-_ENV.setmetatable ( no , deepcopy ( _ENV.getmetatable ( o ) , seen ) ) --43
-else--44
-no = o --45
-end--46
-return no --47
-end--48
-local initial_environment = { --52
-_VERSION = _ENV._VERSION , --53
-assert = _ENV.assert , --54
-collectgarbage = _ENV.collectgarbage , --55
-dofile = _ENV.dofile , --56
-error = _ENV.error , --57
-getmetatable = _ENV.getmetatable , --58
-ipairs = _ENV.ipairs , --59
-load = _ENV.load , --60
-loadfile = _ENV.loadfile , --61
-loadstring = _ENV.loadstring , --62
-next = _ENV.next , --63
-pairs = _ENV.pairs , --64
-pcall = _ENV.pcall , --65
-print = _ENV.print , --66
-rawequal = _ENV.rawequal , --67
-rawlen = _ENV.rawlen , --68
-rawset = _ENV.rawset , --69
-rawget = _ENV.rawget , --70
-require = _ENV.require , --71
-select = _ENV.select , --72
-setmetatable = _ENV.setmetatable , --73
-tonumber = _ENV.tonumber , --74
-tostring = _ENV.tostring , --75
-type = _ENV.type , --76
-warn = _ENV.warn , --77
-xpcall = _ENV.xpcall , --78
-unpack = _ENV.unpack , --79
-getfenv = _ENV.getfenv , --80
-setfenv = _ENV.setfenv , --81
-utf8 = deepcopy ( _ENV.utf8 ) , --82
-coroutine = deepcopy ( _ENV.coroutine ) , --83
-debug = deepcopy ( _ENV.debug ) , --84
-io = deepcopy ( _ENV.io ) , --85
-math = deepcopy ( _ENV.math ) , --86
-os = deepcopy ( _ENV.os ) , --87
-string = deepcopy ( _ENV.string ) , --88
-package = deepcopy ( _ENV.package ) , --89
-table = deepcopy ( _ENV.table ) , --90
-}--91
-local set_mt = { } --94
-set_mt . __index = set_mt --95
-function set_mt : add ( ... ) --96
-for _ , element in _ENV.ipairs ( { ... } ) do --97
-self [ element ] = true --98
-end--99
+local deepcopy --10
+deepcopy = function ( o , seen ) --11
+seen = seen or { } --12
+if o == nil then --13
+return nil end --13
+if seen [ o ] then --14
+return seen [ o ] end --14
+local no --16
+if _ENV.type ( o ) == 'table' then --17
+no = { } --18
+seen [ o ] = no --19
+for k , v in _ENV.next , o , nil do --21
+no [ deepcopy ( k , seen ) ] = deepcopy ( v , seen ) --22
+end--23
+_ENV.setmetatable ( no , deepcopy ( _ENV.getmetatable ( o ) , seen ) ) --24
+else--25
+no = o --26
+end--27
+return no --28
+end--29
+local initial_environment = { --33
+_VERSION = _ENV._VERSION , --34
+assert = _ENV.assert , --35
+collectgarbage = _ENV.collectgarbage , --36
+dofile = _ENV.dofile , --37
+error = _ENV.error , --38
+getmetatable = _ENV.getmetatable , --39
+ipairs = _ENV.ipairs , --40
+load = _ENV.load , --41
+loadfile = _ENV.loadfile , --42
+loadstring = _ENV.loadstring , --43
+next = _ENV.next , --44
+pairs = _ENV.pairs , --45
+pcall = _ENV.pcall , --46
+print = _ENV.print , --47
+rawequal = _ENV.rawequal , --48
+rawlen = _ENV.rawlen , --49
+rawset = _ENV.rawset , --50
+rawget = _ENV.rawget , --51
+require = _ENV.require , --52
+select = _ENV.select , --53
+setmetatable = _ENV.setmetatable , --54
+tonumber = _ENV.tonumber , --55
+tostring = _ENV.tostring , --56
+type = _ENV.type , --57
+warn = _ENV.warn , --58
+xpcall = _ENV.xpcall , --59
+unpack = _ENV.unpack , --60
+getfenv = _ENV.getfenv , --61
+setfenv = _ENV.setfenv , --62
+utf8 = deepcopy ( _ENV.utf8 ) , --63
+coroutine = deepcopy ( _ENV.coroutine ) , --64
+debug = deepcopy ( _ENV.debug ) , --65
+io = deepcopy ( _ENV.io ) , --66
+math = deepcopy ( _ENV.math ) , --67
+os = deepcopy ( _ENV.os ) , --68
+string = deepcopy ( _ENV.string ) , --69
+package = deepcopy ( _ENV.package ) , --70
+table = deepcopy ( _ENV.table ) , --71
+}--72
+local set_mt = { } --75
+set_mt . __index = set_mt --76
+function set_mt : add ( ... ) --77
+for _ , element in _ENV.ipairs ( { ... } ) do --78
+self [ element ] = true --79
+end--80
+end--81
+function set_mt : remove ( ... ) --82
+for _ , element in _ENV.ipairs ( { ... } ) do --83
+self [ element ] = nil --84
+end--85
+end--86
+function set_mt : removeall ( ) --87
+for key in _ENV.pairs ( self ) do --88
+self [ key ] = nil --89
+end--90
+end--91
+function set_mt : add_from_table ( tab ) --92
+for key in _ENV.pairs ( tab ) do --93
+self [ key ] = true --94
+end--95
+end--96
+local function new_set ( ) --98
+return _ENV.setmetatable ( { } , set_mt ) --99
 end--100
-function set_mt : remove ( ... ) --101
-for _ , element in _ENV.ipairs ( { ... } ) do --102
-self [ element ] = nil --103
-end--104
-end--105
-function set_mt : removeall ( ) --106
-for key in _ENV.pairs ( self ) do --107
-self [ key ] = nil --108
-end--109
-end--110
-function set_mt : add_from_table ( tab ) --111
-for key in _ENV.pairs ( tab ) do --112
-self [ key ] = true --113
-end--114
-end--115
-local function new_set ( ) --117
-return _ENV.setmetatable ( { } , set_mt ) --118
-end--119
-local template_mt = { } --127
-template_mt . __index = template_mt --128
-function template_mt : create_env ( ) --131
-local environment = { } --132
-if self . inherits then --133
-local old_environment = self . inherits : create_env ( ) --134
-for key in _ENV.pairs ( self . keeps ) do --135
-local module , method = key : match ( '([^%.]+)%.([^%.]+)' ) --136
-if module and old_environment [ module ] then --137
-environment [ module ] = environment [ module ] or { } --138
-environment [ module ] [ method ] = old_environment [ module ] [ method ] --139
-else--140
-environment [ key ] = old_environment [ key ] --141
-end--142
-end--146
-old_environment = nil --147
-end--150
-for key , value in _ENV.pairs ( self . sets ) do --151
-environment [ deepcopy ( key ) ] = deepcopy ( value ) --152
-end--153
-if self . special then --154
-self . special ( environment ) --155
-end--156
-return environment --157
-end--158
-local sandboxes = { } --160
-function sandboxes . clone ( original ) --163
-local new = { } --164
-new . __is_sandbox_template = true --165
-new . keeps = new_set ( ) --166
-new . sets = { } --167
-new . inherits = original . inherits --168
-for key in _ENV.pairs ( original . keeps ) do --169
-new . keeps : add ( key ) --170
-end--171
-for key , value in _ENV.pairs ( original . sets ) do --172
-new . sets [ key ] = value --173
-end--174
-new . special = original . special --175
-new . _G = new --176
-_ENV.setmetatable ( new , template_mt ) --177
-return new --178
+local template_mt = { } --108
+template_mt . __index = template_mt --109
+function template_mt : create_env ( ) --112
+local environment = { } --113
+if self . inherits then --114
+local old_environment = self . inherits : create_env ( ) --115
+for key in _ENV.pairs ( self . keeps ) do --116
+local module , method = key : match ( '([^%.]+)%.([^%.]+)' ) --117
+if module and old_environment [ module ] then --118
+environment [ module ] = environment [ module ] or { } --119
+environment [ module ] [ method ] = old_environment [ module ] [ method ] --120
+else--121
+environment [ key ] = old_environment [ key ] --122
+end--123
+end--127
+old_environment = nil --128
+end--131
+for key , value in _ENV.pairs ( self . sets ) do --132
+environment [ deepcopy ( key ) ] = deepcopy ( value ) --133
+end--134
+if self . special then --135
+self . special ( environment ) --136
+end--137
+return environment --138
+end--139
+local sandboxes = { } --141
+function sandboxes . clone ( original ) --144
+local new = { } --145
+new . __is_sandbox_template = true --146
+new . keeps = new_set ( ) --147
+new . sets = { } --148
+new . inherits = original . inherits --149
+for key in _ENV.pairs ( original . keeps ) do --150
+new . keeps : add ( key ) --151
+end--152
+for key , value in _ENV.pairs ( original . sets ) do --153
+new . sets [ key ] = value --154
+end--155
+new . special = original . special --156
+new . _G = new --157
+_ENV.setmetatable ( new , template_mt ) --158
+return new --159
+end--160
+function sandboxes . new ( inherits , inherit_keeps ) --164
+local new_template = { } --165
+new_template . __is_sandbox_template = true --166
+new_template . keeps = new_set ( ) --167
+new_template . sets = { } --168
+if inherits then --169
+if inherits . __is_sandbox_template then --170
+new_template . inherits = inherits --171
+if inherit_keeps then --172
+for key in _ENV.pairs ( inherits . keeps ) do --173
+new_template . keeps : add ( key ) --174
+end--175
+end--176
+else--177
+_ENV.error ( "attempted to inherit from invalid parent" , 2 ) --178
 end--179
-function sandboxes . new ( inherits , inherit_keeps ) --183
-local new_template = { } --184
-new_template . __is_sandbox_template = true --185
-new_template . keeps = new_set ( ) --186
-new_template . sets = { } --187
-if inherits then --188
-if inherits . __is_sandbox_template then --189
-new_template . inherits = inherits --190
-if inherit_keeps then --191
-for key in _ENV.pairs ( inherits . keeps ) do --192
-new_template . keeps : add ( key ) --193
-end--194
-end--195
-else--196
-_ENV.error ( "attempted to inherit from invalid parent" , 2 ) --197
-end--198
-end--199
-new_template . _G = new_template --200
-_ENV.setmetatable ( new_template , template_mt ) --201
-return new_template --202
-end--203
-sandboxes . unsafe = sandboxes . new ( ) --205
-sandboxes . unsafe . sets = initial_environment --206
-sandboxes . restricted = sandboxes . new ( sandboxes . unsafe ) --210
-sandboxes . restricted . keeps : add ( "_VERSION" , "assert" , "collectgarbage" , "error" , "ipairs" , "next" , --211
-"pairs" , "pcall" , "print" , "select" , "tonumber" , "tostring" , "type" , --212
-"warn" , "xpcall" , "unpack" , --213
-"utf8.char" , "utf8.charpattern" , "utf8.codes" , "utf8.codepoint" , --214
-"utf8.len" , "utf8.offset" , --215
-"math.abs" , "math.acos" , "math.asin" , "math.atan" , "math.atan2" , --216
-"math.ceil" , "math.floor" , "math.cos" , "math.cosh" , "math.deg" , --217
-"math.exp" , "math.fmod" , "math.frexp" , "math.huge" , "math.ldexp" , --218
-"math.log" , "math.log10" , "math.max" , "math.min" , "math.modf" , "math.pi" , --219
-"math.pow" , "math.rad" , "math.random" , "math.sin" , "math.sinh" , --220
-"math.sqrt" , "math.tan" , "math.tanh" , --221
-"string.lower" , "string.upper" , "string.dump" , "string.find" , --222
-"string.match" , "string.gmatch" , "string.gsub" , "string.format" , --223
-"string.len" , "string.byte" , "string.char" , "string.sub" , "string.rep" , --224
-"string.reverse" , --225
-"coroutine.status" , "coroutine.running" , "coroutine.isyieldable" , --226
-"coroutine.create" , "coroutine.yield" , "coroutine.resume" , --227
-"coroutine.wrap" , --228
-"os.clock" , "os.difftime" , "os.time" , --229
-"table.insert" , "table.maxn" , "table.remove" , "table.sort" --230
-)--231
-sandboxes . protected = sandboxes . clone ( sandboxes . restricted ) --237
-sandboxes . protected . special = function ( sbox ) --238
-if _ENV._VERSION < "Lua 5.2" then --239
-sbox . load = function ( a , b ) --240
-local chunk , err = _ENV.load ( a , b ) --241
-if chunk then --242
-_ENV.setfenv ( chunk , sbox ) --242
-end --242
-return chunk , err --243
-end--244
-sbox . loadfile = function ( a ) --245
-local chunk , err = _ENV.loadfile ( a ) --246
-if chunk then --247
-_ENV.setfenv ( chunk , sbox ) --247
-end --247
-return chunk , err --248
-end--249
-sbox . loadstring = function ( a ) --250
-local chunk , err = _ENV.loadstring ( a ) --251
-if chunk then --252
-_ENV.setfenv ( chunk , sbox ) --252
-end --252
-return chunk , err --253
+end--180
+new_template . _G = new_template --181
+_ENV.setmetatable ( new_template , template_mt ) --182
+return new_template --183
+end--184
+sandboxes . unsafe = sandboxes . new ( ) --186
+sandboxes . unsafe . sets = initial_environment --187
+sandboxes . restricted = sandboxes . new ( sandboxes . unsafe ) --191
+sandboxes . restricted . keeps : add ( "_VERSION" , "assert" , "collectgarbage" , "error" , "ipairs" , "next" , --192
+"pairs" , "pcall" , "print" , "select" , "tonumber" , "tostring" , "type" , --193
+"warn" , "xpcall" , "unpack" , --194
+"utf8.char" , "utf8.charpattern" , "utf8.codes" , "utf8.codepoint" , --195
+"utf8.len" , "utf8.offset" , --196
+"math.abs" , "math.acos" , "math.asin" , "math.atan" , "math.atan2" , --197
+"math.ceil" , "math.floor" , "math.cos" , "math.cosh" , "math.deg" , --198
+"math.exp" , "math.fmod" , "math.frexp" , "math.huge" , "math.ldexp" , --199
+"math.log" , "math.log10" , "math.max" , "math.min" , "math.modf" , "math.pi" , --200
+"math.pow" , "math.rad" , "math.random" , "math.sin" , "math.sinh" , --201
+"math.sqrt" , "math.tan" , "math.tanh" , --202
+"string.lower" , "string.upper" , "string.dump" , "string.find" , --203
+"string.match" , "string.gmatch" , "string.gsub" , "string.format" , --204
+"string.len" , "string.byte" , "string.char" , "string.sub" , "string.rep" , --205
+"string.reverse" , --206
+"coroutine.status" , "coroutine.running" , "coroutine.isyieldable" , --207
+"coroutine.create" , "coroutine.yield" , "coroutine.resume" , --208
+"coroutine.wrap" , --209
+"os.clock" , "os.difftime" , "os.time" , --210
+"table.insert" , "table.maxn" , "table.remove" , "table.sort" --211
+)--212
+function sandboxes . _check_file_exists ( filename ) --215
+local file = _ENV.io . open ( filename ) --216
+if file then --217
+file : close ( ) --218
+return true --219
+end--220
+return false --221
+end--222
+sandboxes . _default_require_path = _ENV.package . path --224
+local function filepath_search ( filepath ) --229
+for path in _ENV.package . path : gmatch ( "[^;]+" ) do --230
+local fixed_path = path : gsub ( "%?" , ( filepath : gsub ( "%." , "/" ) ) ) --231
+if sandboxes . _check_file_exists ( fixed_path ) then --238
+return fixed_path --239
+end--240
+end--241
+end--242
+local function return_lua_searcher ( env ) --244
+local searcher = function ( modulepath ) --245
+local filepath = filepath_search ( modulepath ) --246
+if filepath then --247
+return function ( reqpath ) --248
+local chunk , err = env . loadfile ( filepath , "t" , env ) --249
+if chunk then --250
+return chunk , reqpath --251
+else--252
+_ENV.error ( "error loading module '" .. reqpath .. "'\n" .. ( err or "" ) , 0 ) --253
 end--254
-else--255
-sbox . load = function ( a , b , c , env ) --256
-if env == nil then --257
-env = sbox --258
+end --255
+else--256
+local err = ( "\n\tno file '%s.lua' in package.path" ) : format ( modulepath , 2 ) --257
+return err --258
 end--259
-return _ENV.load ( a , b , c , env ) --260
-end--261
-sbox . loadfile = function ( a , b , env ) --262
-if env == nil then --263
-env = sbox --264
-end--265
-return _ENV.loadfile ( a , b , env ) --266
-end--267
-sbox . loadstring = function ( string , env ) --268
-if env == nil then --269
-env = sbox --270
-end--271
-return _ENV.load ( string , nil , "t" , env ) --272
-end--273
-end--274
-sbox . dofile = function ( a ) --277
-local chunk , err = sbox . loadfile ( a ) --278
-if err then --279
-_ENV.error ( err , 2 ) --279
-end --279
-return chunk ( ) --280
-end--281
-end--282
-local function test_print ( env ) --286
-for k , v in _ENV.pairs ( env ) do --287
-if k ~= "_G" then --288
-if _ENV.type ( v ) == "table" then --289
-local concat = { } --291
-for j , l in _ENV.pairs ( v ) do --292
-if _ENV.type ( l ) == "table" then --293
-end--295
-_ENV.table . insert ( concat , ( "%s.%s" ) : format ( k , j ) ) --297
+end--260
+return searcher --261
+end--262
+local function create_require ( env ) --265
+env . package = env . package or { } --266
+env . package . searchers = { return_lua_searcher ( env ) } --267
+env . package . preload = { } --268
+env . package . loaded = { } --269
+env . package . path = sandboxes . _default_require_path --270
+env . require = function ( modname ) --272
+if env . package . loaded [ modname ] then --273
+return env . package . loaded [ modname ] --274
+end--275
+local loader --277
+local errors = { } --278
+if env . package . preload [ modname ] then --279
+loader = env . package . preload [ modname ] --280
+else--281
+for _ , searcher in _ENV.ipairs ( env . package . searchers ) do --282
+local result = searcher ( modname ) --283
+if _ENV.type ( result ) == "function" then --284
+loader = result --285
+break--286
+else--287
+_ENV.table . insert ( errors , result ) --288
+end--289
+end--290
+end--291
+if loader == nil then --292
+_ENV.error ( _ENV.table . concat ( errors ) ) --293
+else--294
+local status , res = _ENV.pcall ( loader , modname ) --295
+if status == false or _ENV.type ( res ) ~= "function" then --296
+_ENV.error ( res , 2 ) --297
 end--298
-_ENV.print ( _ENV.table . concat ( concat , "    " ) ) --299
-else--300
-_ENV.print ( ( "%s - %s" ) : format ( k , v ) ) --301
-end--302
-end--303
+local chunk = res --300
+status , res = _ENV.pcall ( chunk , modname ) --301
+if status == false then --302
+_ENV.error ( "error loading module '" .. modname .. "'\n" .. res , 2 ) --303
 end--304
-end--305
+if res == nil then --305
+res = true --306
+end--307
+env . package . loaded [ modname ] = res --308
+return res --309
+end--310
+end--311
+end--312
+sandboxes . protected = sandboxes . clone ( sandboxes . restricted ) --316
+sandboxes . protected . special = function ( sbox ) --317
+if _ENV._VERSION == "Lua 5.1" then --318
+sbox . load = function ( a , b ) --319
+local chunk , err = _ENV.load ( a , b ) --320
+if chunk then --321
+_ENV.setfenv ( chunk , sbox ) --321
+end --321
+return chunk , err --322
+end--323
+sbox . loadfile = function ( a ) --324
+local chunk , err = _ENV.loadfile ( a ) --325
+if chunk then --326
+_ENV.setfenv ( chunk , sbox ) --326
+end --326
+return chunk , err --327
+end--328
+sbox . loadstring = function ( a ) --329
+local chunk , err = _ENV.loadstring ( a ) --330
+if chunk then --331
+_ENV.setfenv ( chunk , sbox ) --331
+end --331
+return chunk , err --332
+end--333
+else--334
+sbox . load = function ( a , b , c , env ) --335
+if env == nil then --336
+env = sbox --337
+end--338
+return _ENV.load ( a , b , c , env ) --339
+end--340
+sbox . loadfile = function ( a , b , env ) --341
+if env == nil then --342
+env = sbox --343
+end--344
+return _ENV.loadfile ( a , b , env ) --345
+end--346
+sbox . loadstring = function ( string , env ) --347
+if env == nil then --348
+env = sbox --349
+end--350
+return _ENV.load ( string , nil , "t" , env ) --351
+end--352
+end--353
+sbox . dofile = function ( a ) --356
+local chunk , err = sbox . loadfile ( a ) --357
+if err then --358
+_ENV.error ( err , 2 ) --358
+end --358
+return chunk ( ) --359
+end--360
+create_require ( sbox ) --361
+end--362
+local function test_print ( env ) --366
+for k , v in _ENV.pairs ( env ) do --367
+if k ~= "_G" then --368
+if _ENV.type ( v ) == "table" then --369
+local concat = { } --371
+for j , l in _ENV.pairs ( v ) do --372
+if _ENV.type ( l ) == "table" then --373
+end--375
+_ENV.table . insert ( concat , ( "%s.%s" ) : format ( k , j ) ) --377
+end--378
+_ENV.print ( _ENV.table . concat ( concat , "    " ) ) --379
+else--380
+_ENV.print ( ( "%s - %s" ) : format ( k , v ) ) --381
+end--382
+end--383
+end--384
+end--385
+local environment = sandboxes . protected : create_env ( ) --406
+local test_code = [[ 	apple = "yummy" 	pear = "fruity" 	lemon = "sour" 	load("print(apple)")() 	 	loadstring("print(pear)")() 	 	loadfile("tmp_test.lua")() 	print(apple) 	dofile("tmp_test.lua") 	print(require("tmp_test-require")) ]] --408
+environment . loadstring ( test_code ) ( ) --429
+_ENV.print ( _ENV.apple , _ENV.pear , _ENV.lemon ) --430
 ---

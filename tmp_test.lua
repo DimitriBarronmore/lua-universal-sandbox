@@ -1,0 +1,3 @@
+print("lemon")
+
+apple = "juicy"
