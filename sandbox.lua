@@ -189,7 +189,7 @@ sandboxes . restricted . keeps : add ( "_VERSION" , "assert" , "collectgarbage" 
 )--231
 sandboxes . protected = sandboxes . clone ( sandboxes . restricted ) --237
 sandboxes . protected . special = function ( sbox ) --238
-if _ENV._VERSION < 5.2 then --239
+if _ENV._VERSION < "Lua 5.2" then --239
 sbox . load = function ( a , b ) --240
 local chunk , err = _ENV.load ( a , b ) --241
 if chunk then --242

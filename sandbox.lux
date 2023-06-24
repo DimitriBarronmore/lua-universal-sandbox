@@ -236,7 +236,7 @@ sandboxes.restricted.keeps:add( "_VERSION", "assert", "collectgarbage", "error",
 
 sandboxes.protected = sandboxes.clone(sandboxes.restricted)
 sandboxes.protected.special = function(sbox)
-	if _VERSION < 5.2 then
+	if _VERSION < "Lua 5.2" then
 		sbox.load = function(a, b)
 			chunk, err = load(a, b)
 			if chunk then setfenv(chunk, sbox) end
@@ -305,6 +305,7 @@ function test_print(env)
 end
 
 -- local env = sandboxes.restricted:create_env()
+-- local env2 = sandboxes.protected:create_env()
 
 -- local templ2 = sandboxes.clone(sandboxes.restricted)
 -- templ2.keeps:remove("print", "unpack")
