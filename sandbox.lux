@@ -200,7 +200,7 @@ sandboxes.restricted.keeps:add( "_VERSION", "assert", "collectgarbage", "error",
 								"math.log", "math.log10", "math.max", "math.min", "math.modf", "math.pi",
 								"math.pow", "math.rad", "math.random", "math.sin", "math.sinh", 
 								"math.sqrt", "math.tan", "math.tanh",
-								"string.lower", "string.upper", "string.dump", "string.find",
+								"string.lower", "string.upper", "string.find",
 								"string.match", "string.gmatch", "string.gsub", "string.format",
 								"string.len", "string.byte", "string.char", "string.sub", "string.rep", 
 								"string.reverse",
@@ -311,9 +311,18 @@ local function create_require(env)
 	end
 end
 
-
+local string_metatable = getmetatable("")
 
 sandboxes.protected = sandboxes.clone(sandboxes.restricted)
+sandboxes.protected.keeps:add("setmetatable", "rawset", "rawget", "rawlen", "rawequal", "string.dump")
+sandboxes.protected.sets.getmetatable = function(obj)
+	res = getmetatable(obj)
+	if res ~= string_metatable then
+		return res
+	else
+		error("attempt to get dangerous metatable from inside sandbox", 2)
+	end
+end
 sandboxes.protected.special = function(sbox)
 	if _VERSION == "Lua 5.1" then
 		sbox.load = function(a, b)
@@ -423,8 +432,14 @@ local test_code = [[
 
 	print(require("tmp_test-require"))
 
+
 ]]
 
 
-environment.loadstring(test_code)()
+-- environment.loadstring(test_code)()
+chunk = loadstring(test_code)
+setfenv(chunk, environment)
+chunk()
 print(apple, pear, lemon)
+
+-- print(getmetatable(""))

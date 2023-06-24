@@ -164,7 +164,7 @@ sandboxes . restricted . keeps : add ( "_VERSION" , "assert" , "collectgarbage" 
 "math.log" , "math.log10" , "math.max" , "math.min" , "math.modf" , "math.pi" , --200
 "math.pow" , "math.rad" , "math.random" , "math.sin" , "math.sinh" , --201
 "math.sqrt" , "math.tan" , "math.tanh" , --202
-"string.lower" , "string.upper" , "string.dump" , "string.find" , --203
+"string.lower" , "string.upper" , "string.find" , --203
 "string.match" , "string.gmatch" , "string.gsub" , "string.format" , --204
 "string.len" , "string.byte" , "string.char" , "string.sub" , "string.rep" , --205
 "string.reverse" , --206
@@ -255,78 +255,90 @@ return res --309
 end--310
 end--311
 end--312
+local string_metatable = _ENV.getmetatable ( "" ) --314
 sandboxes . protected = sandboxes . clone ( sandboxes . restricted ) --316
-sandboxes . protected . special = function ( sbox ) --317
-if _ENV._VERSION == "Lua 5.1" then --318
-sbox . load = function ( a , b ) --319
-local chunk , err = _ENV.load ( a , b ) --320
-if chunk then --321
-_ENV.setfenv ( chunk , sbox ) --321
-end --321
-return chunk , err --322
-end--323
-sbox . loadfile = function ( a ) --324
-local chunk , err = _ENV.loadfile ( a ) --325
-if chunk then --326
-_ENV.setfenv ( chunk , sbox ) --326
-end --326
-return chunk , err --327
-end--328
-sbox . loadstring = function ( a ) --329
-local chunk , err = _ENV.loadstring ( a ) --330
-if chunk then --331
-_ENV.setfenv ( chunk , sbox ) --331
-end --331
-return chunk , err --332
-end--333
-else--334
-sbox . load = function ( a , b , c , env ) --335
-if env == nil then --336
-env = sbox --337
-end--338
-return _ENV.load ( a , b , c , env ) --339
-end--340
-sbox . loadfile = function ( a , b , env ) --341
-if env == nil then --342
-env = sbox --343
-end--344
-return _ENV.loadfile ( a , b , env ) --345
-end--346
-sbox . loadstring = function ( string , env ) --347
-if env == nil then --348
-env = sbox --349
-end--350
-return _ENV.load ( string , nil , "t" , env ) --351
-end--352
+sandboxes . protected . keeps : add ( "setmetatable" , "rawset" , "rawget" , "rawlen" , "rawequal" , "string.dump" ) --317
+sandboxes . protected . sets . getmetatable = function ( obj ) --318
+local res = _ENV.getmetatable ( obj ) --319
+if res ~= string_metatable then --320
+return res --321
+else--322
+_ENV.error ( "attempt to get dangerous metatable from inside sandbox" , 2 ) --323
+end--324
+end--325
+sandboxes . protected . special = function ( sbox ) --326
+if _ENV._VERSION == "Lua 5.1" then --327
+sbox . load = function ( a , b ) --328
+local chunk , err = _ENV.load ( a , b ) --329
+if chunk then --330
+_ENV.setfenv ( chunk , sbox ) --330
+end --330
+return chunk , err --331
+end--332
+sbox . loadfile = function ( a ) --333
+local chunk , err = _ENV.loadfile ( a ) --334
+if chunk then --335
+_ENV.setfenv ( chunk , sbox ) --335
+end --335
+return chunk , err --336
+end--337
+sbox . loadstring = function ( a ) --338
+local chunk , err = _ENV.loadstring ( a ) --339
+if chunk then --340
+_ENV.setfenv ( chunk , sbox ) --340
+end --340
+return chunk , err --341
+end--342
+else--343
+sbox . load = function ( a , b , c , env ) --344
+if env == nil then --345
+env = sbox --346
+end--347
+return _ENV.load ( a , b , c , env ) --348
+end--349
+sbox . loadfile = function ( a , b , env ) --350
+if env == nil then --351
+env = sbox --352
 end--353
-sbox . dofile = function ( a ) --356
-local chunk , err = sbox . loadfile ( a ) --357
-if err then --358
-_ENV.error ( err , 2 ) --358
-end --358
-return chunk ( ) --359
-end--360
-create_require ( sbox ) --361
+return _ENV.loadfile ( a , b , env ) --354
+end--355
+sbox . loadstring = function ( string , env ) --356
+if env == nil then --357
+env = sbox --358
+end--359
+return _ENV.load ( string , nil , "t" , env ) --360
+end--361
 end--362
-local function test_print ( env ) --366
-for k , v in _ENV.pairs ( env ) do --367
-if k ~= "_G" then --368
-if _ENV.type ( v ) == "table" then --369
-local concat = { } --371
-for j , l in _ENV.pairs ( v ) do --372
-if _ENV.type ( l ) == "table" then --373
-end--375
-_ENV.table . insert ( concat , ( "%s.%s" ) : format ( k , j ) ) --377
-end--378
-_ENV.print ( _ENV.table . concat ( concat , "    " ) ) --379
-else--380
-_ENV.print ( ( "%s - %s" ) : format ( k , v ) ) --381
-end--382
-end--383
+sbox . dofile = function ( a ) --365
+local chunk , err = sbox . loadfile ( a ) --366
+if err then --367
+_ENV.error ( err , 2 ) --367
+end --367
+return chunk ( ) --368
+end--369
+create_require ( sbox ) --370
+end--371
+local function test_print ( env ) --375
+for k , v in _ENV.pairs ( env ) do --376
+if k ~= "_G" then --377
+if _ENV.type ( v ) == "table" then --378
+local concat = { } --380
+for j , l in _ENV.pairs ( v ) do --381
+if _ENV.type ( l ) == "table" then --382
 end--384
-end--385
-local environment = sandboxes . protected : create_env ( ) --406
-local test_code = [[ 	apple = "yummy" 	pear = "fruity" 	lemon = "sour" 	load("print(apple)")() 	 	loadstring("print(pear)")() 	 	loadfile("tmp_test.lua")() 	print(apple) 	dofile("tmp_test.lua") 	print(require("tmp_test-require")) ]] --408
-environment . loadstring ( test_code ) ( ) --429
-_ENV.print ( _ENV.apple , _ENV.pear , _ENV.lemon ) --430
+_ENV.table . insert ( concat , ( "%s.%s" ) : format ( k , j ) ) --386
+end--387
+_ENV.print ( _ENV.table . concat ( concat , "    " ) ) --388
+else--389
+_ENV.print ( ( "%s - %s" ) : format ( k , v ) ) --390
+end--391
+end--392
+end--393
+end--394
+local environment = sandboxes . protected : create_env ( ) --415
+local test_code = [[ 	apple = "yummy" 	pear = "fruity" 	lemon = "sour" 	load("print(apple)")() 	 	loadstring("print(pear)")() 	 	loadfile("tmp_test.lua")() 	print(apple) 	dofile("tmp_test.lua") 	print(require("tmp_test-require")) ]] --417
+local chunk = _ENV.loadstring ( test_code ) --440
+_ENV.setfenv ( chunk , environment ) --441
+chunk ( ) --442
+_ENV.print ( _ENV.apple , _ENV.pear , _ENV.lemon ) --443
 ---
