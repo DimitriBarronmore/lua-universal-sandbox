@@ -89,9 +89,14 @@ function set_mt:removeall()
 		self[key] = nil
 	end
 end
-function set_mt:add_from_table(tab)
-	for key in pairs(tab) do
-		self[key] = true
+function set_mt:add_from_table(tab, prefix)
+	prefix = prefix or ""
+	for key, val in pairs(tab) do
+		if type(val) == "table" and prefix == "" then
+			self:add_from_table(val, key..".")
+		else
+		self[prefix..key] = true
+		end
 	end
 end
 ---@return set
