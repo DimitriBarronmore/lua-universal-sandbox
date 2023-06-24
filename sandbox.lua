@@ -318,27 +318,5 @@ return chunk ( ) --368
 end--369
 create_require ( sbox ) --370
 end--371
-local function test_print ( env ) --375
-for k , v in _ENV.pairs ( env ) do --376
-if k ~= "_G" then --377
-if _ENV.type ( v ) == "table" then --378
-local concat = { } --380
-for j , l in _ENV.pairs ( v ) do --381
-if _ENV.type ( l ) == "table" then --382
-end--384
-_ENV.table . insert ( concat , ( "%s.%s" ) : format ( k , j ) ) --386
-end--387
-_ENV.print ( _ENV.table . concat ( concat , "    " ) ) --388
-else--389
-_ENV.print ( ( "%s - %s" ) : format ( k , v ) ) --390
-end--391
-end--392
-end--393
-end--394
-local environment = sandboxes . protected : create_env ( ) --415
-local test_code = [[ 	apple = "yummy" 	pear = "fruity" 	lemon = "sour" 	load("print(apple)")() 	 	loadstring("print(pear)")() 	 	loadfile("tmp_test.lua")() 	print(apple) 	dofile("tmp_test.lua") 	print(require("tmp_test-require")) ]] --417
-local chunk = _ENV.loadstring ( test_code ) --440
-_ENV.setfenv ( chunk , environment ) --441
-chunk ( ) --442
-_ENV.print ( _ENV.apple , _ENV.pear , _ENV.lemon ) --443
+return sandboxes --373
 ---
