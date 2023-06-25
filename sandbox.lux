@@ -322,9 +322,8 @@ sandboxes.protected = sandboxes.clone(sandboxes.restricted)
 sandboxes.protected.keeps:add("setmetatable", "rawset", "rawget", "rawlen", "rawequal", "string.dump", 
 							  "string.rep", "collectgarbage")
 sandboxes.protected.sets.getmetatable = function(obj)
-	res = getmetatable(obj)
-	if res ~= string_metatable then
-		return res
+	if type(obj) == "table" then
+		return getmetatable(obj)
 	else
 		error("attempt to get dangerous metatable from inside sandbox", 2)
 	end
