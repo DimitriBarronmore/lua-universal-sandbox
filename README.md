@@ -17,7 +17,7 @@ In theory, this should work from Lua 5.1/JIT and above.
 # Usage 
 Require the module:
 ```lua
-local sandbox = require "sandbox"
+local sandboxes = require "sandbox"
 ```
 
 The library comes with three sandboxes predefined:
