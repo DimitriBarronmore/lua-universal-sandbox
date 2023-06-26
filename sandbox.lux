@@ -166,16 +166,16 @@ end
 
 ---@param inherits sandboxTemplate? The template to inherit from, if any.
 ---@return sandboxTemplate
-function sandboxes.new(inherits, inherit_keeps)
+function sandboxes.new(parent, inherit_whitelist)
 	new_template = {}
 	new_template.__is_sandbox_template = true
 	new_template.keeps = new_set()
 	new_template.sets = {}
-	if inherits then
-		if inherits.__is_sandbox_template then
-			new_template.inherits = inherits
-			if inherit_keeps then
-				for key in pairs(inherits.keeps) do
+	if parent then
+		if parent.__is_sandbox_template then
+			new_template.inherits = parent
+			if inherit_whitelist then
+				for key in pairs(parent.keeps) do
 					new_template.keeps:add(key)
 				end
 			end
