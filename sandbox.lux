@@ -137,6 +137,7 @@ function template_mt:create_env()
 	for key, value in pairs(self.sets) do
 		environment[deepcopy(key)] = deepcopy(value)
 	end
+	environment._G = environment
 	if self.special then
 		self.special(environment)
 	end
@@ -159,7 +160,6 @@ function sandboxes.clone(original)
 		new.sets[key] = value
 	end
 	new.special = original.special
-	new._G = new
 	setmetatable(new, template_mt)
 	return new
 end
@@ -183,7 +183,6 @@ function sandboxes.new(parent, inherit_whitelist)
 			error("attempted to inherit from invalid parent", 2)
 		end
 	end
-	new_template._G = new_template
 	setmetatable(new_template, template_mt)
 	return new_template
 end
